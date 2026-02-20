@@ -5,6 +5,14 @@
  * Control directo del ATEM vía atem-connection; sin Companion.
  */
 
+// Ocultar mensaje informativo de ThreadedClass (atem-connection)
+const stderrWrite = process.stderr.write.bind(process.stderr);
+process.stderr.write = (chunk, enc, cb) => {
+  const s = typeof chunk === 'string' ? chunk : (chunk && chunk.toString?.());
+  if (s && /ThreadedClass.*Skipping exit handler/i.test(s)) return cb ? cb() : true;
+  return stderrWrite(chunk, enc, cb);
+};
+
 import { Atem } from 'atem-connection';
 import { selectATEMInteractively } from './discover-atem.js';
 import { CONFIG } from './config.js';
@@ -342,14 +350,13 @@ async function main() {
 
   let atemIp = CONFIG.atemIp;
   if (!atemIp) {
-    console.log('\n🔍 Buscando ATEM en la red...\n');
+    console.log('\n🔍 Buscando ATEM en la red (IP automática)...\n');
     atemIp = await selectATEMInteractively();
     if (!atemIp) {
-      console.error('❌ No se encontró ATEM. Usa ATEM_IP=... npm start');
+      console.error('❌ No se encontró ATEM. Conéctalo a la red o usa: ATEM_IP=192.168.x.x npm start');
       process.exit(1);
     }
   }
-
   console.log(`\n📍 ATEM: ${atemIp}`);
   CONFIG.atemIp = atemIp;
 

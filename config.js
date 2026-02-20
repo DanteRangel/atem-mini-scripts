@@ -2,8 +2,11 @@
  * Configuración del auto-switch (variables de entorno y valores por defecto).
  */
 
+// Fija aquí la IP de tu ATEM para no depender del descubrimiento (ej. si hay varios en la red)
+const ATEM_IP_FIJA = null; // ej: '192.168.68.111'
+
 export const CONFIG = {
-  atemIp: process.env.ATEM_IP || null,
+  atemIp: process.env.ATEM_IP || ATEM_IP_FIJA || null,
 
   cameraMapping: {
     1: { name: 'Cámara 1' },

@@ -8,9 +8,15 @@
     "start": "node auto-switch-atem.js",
     "start:atem": "node auto-switch-atem.js"
   },
-  "keywords": ["atem", "audio", "auto-switch", "fairlight"],
+  "keywords": [
+    "atem",
+    "audio",
+    "auto-switch",
+    "fairlight"
+  ],
   "license": "MIT",
   "dependencies": {
-    "atem-connection": "^3.9.0"
+    "atem-connection": "^3.9.0",
+    "multicast-dns": "^7.2.5"
   }
 }

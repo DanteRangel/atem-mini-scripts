@@ -24,11 +24,15 @@ npm install
 ## Uso
 
 ```bash
-# Con IP del ATEM
-ATEM_IP=192.168.68.111 npm start
-
-# Sin IP: busca ATEM en la red y elige uno
+# Sin configurar nada: busca el ATEM en la red y usa su IP automáticamente
 npm start
+```
+
+El script descubre el ATEM como **Companion**: por **Bonjour/mDNS** (servicio `_blackmagic._tcp`) y además por **UDP** (puerto 20595). Si encuentra **uno**, lo usa. Si encuentra **varios**, usa el **ATEM Mini Pro** si aparece; si no, pide que elijas uno.
+
+```bash
+# Opcional: fijar la IP (evita búsqueda)
+ATEM_IP=192.168.68.111 npm start
 ```
 
 ## Configuración (variables de entorno)
