@@ -1,0 +1,16 @@
+{
+  "name": "atem-mini-auto-switch",
+  "version": "1.0.0",
+  "description": "Auto-switch de cámaras en ATEM Mini Pro por audio (lavalieres en cámara)",
+  "main": "auto-switch-atem.js",
+  "type": "module",
+  "scripts": {
+    "start": "node auto-switch-atem.js",
+    "start:atem": "node auto-switch-atem.js"
+  },
+  "keywords": ["atem", "audio", "auto-switch", "fairlight"],
+  "license": "MIT",
+  "dependencies": {
+    "atem-connection": "^3.9.0"
+  }
+}
