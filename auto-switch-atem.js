@@ -244,15 +244,15 @@ class AtemAutoSwitch {
       if (this.wideHoldSingleStartedAt == null) {
         this.wideHoldSingleStartedAt = now;
         this.wideHoldSingleTargetId = switchTo;
+        const name = CONFIG.cameraMapping[switchTo]?.name || switchTo;
+        const delaySingle = CONFIG.audio.switchDelayMs ?? 800;
+        if (CONFIG.debug) {
+          console.log(`   [timing] Plano: cortar a "${name}" en ${(wideHoldMs / 1000).toFixed(1)}s + ${delaySingle}ms`);
+        }
       }
       const holdElapsed = now - this.wideHoldSingleStartedAt;
       if (holdElapsed < wideHoldMs) {
         this.pendingSwitch = null;
-        if (CONFIG.debug && (!this._lastWideHoldLog || now - this._lastWideHoldLog > 800)) {
-          this._lastWideHoldLog = now;
-          const name = CONFIG.cameraMapping[switchTo]?.name || switchTo;
-          console.log(`   [debug] Plano: esperando ${((wideHoldMs - holdElapsed) / 1000).toFixed(1)}s antes de cortar a ${name}`);
-        }
         return;
       }
     } else {
@@ -272,10 +272,6 @@ class AtemAutoSwitch {
 
     if (!this.pendingSwitch || this.pendingSwitch.targetId !== switchTo) {
       this.pendingSwitch = { targetId: switchTo, decision, scheduledAt: now };
-      if (CONFIG.debug) {
-        const name = CONFIG.cameraMapping[switchTo]?.name || switchTo;
-        console.log(`   [debug] Pendiente corte a ${name} (${decision.reason}) en ${switchDelayMs}ms`);
-      }
       return;
     }
 
@@ -288,12 +284,16 @@ class AtemAutoSwitch {
       return;
     }
 
-    this.switchToCamera(this.pendingSwitch.targetId, this.pendingSwitch.decision);
+    this.switchToCamera(
+      this.pendingSwitch.targetId,
+      this.pendingSwitch.decision,
+      switchDelayMs
+    );
     this.pendingSwitch = null;
     this._lastDelayLog = 0;
   }
 
-  async switchToCamera(inputId, decision = null) {
+  async switchToCamera(inputId, decision = null, delayMs = null) {
     const id = Number(inputId);
     const cameraConfig = CONFIG.cameraMapping[id];
     if (!cameraConfig) {
@@ -314,13 +314,20 @@ class AtemAutoSwitch {
       }
       actualId = Number(actualId);
 
-      // Enviar comando sin esperar ACK del ATEM (fire-and-forget) para que el corte se sienta al instante
+      // Enviar comando al ATEM (fire-and-forget; el corte se aplica cuando el ATEM responde)
       this.currentCamera = id;
       this.lastSwitchTime = Date.now();
       const reasonText = this._reasonToText(decision);
       console.log(`✅ ${cameraConfig.name}${reasonText}`);
+      if (CONFIG.debug && delayMs != null) {
+        console.log(`   [timing] delay ${delayMs}ms`);
+      }
 
       const doCut = async () => {
+        const t0 = Date.now();
+        if (CONFIG.debug) {
+          console.log(`   [ATEM] → changeProgramInput(${actualId}) "${cameraConfig.name}"`);
+        }
         try {
           if (CONFIG.transition.type === 'cut') {
             await this.atem.changeProgramInput(actualId);
@@ -328,8 +335,9 @@ class AtemAutoSwitch {
             await this.atem.changePreviewInput(actualId);
             await this.atem.autoTransition();
           }
+          const ms = Date.now() - t0;
           if (CONFIG.debug) {
-            console.log(`   [debug] ATEM ack recibido para ${cameraConfig.name}`);
+            console.log(`   [ATEM] ← ack en ${ms}ms`);
           }
         } catch (err) {
           console.error(`❌ Error al cambiar a ${cameraConfig.name}:`, err.message);
