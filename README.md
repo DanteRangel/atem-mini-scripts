@@ -47,6 +47,7 @@ ATEM_IP=192.168.68.111 npm start
 | `COOLDOWN_TIME` | ms entre cortes permitidos. | `2000` |
 | `MIN_VOLUME_DIFFERENCE` | Diferencia mínima (0–1) para cambiar de cámara. | `0.02` |
 | `SWITCH_DELAY_MS` | ms de espera antes de ejecutar el corte. | `800` |
+| `WIDE_HOLD_BEFORE_SINGLE_MS` | Estando en plano: ms que debe hablar solo una persona antes de cortar a su cámara. | `4000` |
 | `WIDE_CAMERA_ID` | Input usado como “cámara amplia” (silencio o 2+ hablan). | `3` |
 | `SILENCE_TO_WIDE_MS` | ms de silencio para ir a cámara amplia. | `2000` |
 | `TRANSITION_TYPE` | `cut` o otro tipo de transición. | `cut` |
@@ -94,6 +95,7 @@ ATEM_IP=192.168.68.111 VOLUME_THRESHOLD=0.10 SWITCH_DELAY_MS=1000 npm start
 
 - Ajustar `SWITCH_DELAY_MS` (ej. `500` más rápido, `1200` más suave).
 - Ajustar `HOLD_TIME` y `COOLDOWN_TIME` según necesidad.
+- **Quedarse más tiempo en plano** cuando solo una persona habla: subir `WIDE_HOLD_BEFORE_SINGLE_MS` (ej. `5000` = 5 s, `6000` = 6 s).
 
 ## Licencia
 

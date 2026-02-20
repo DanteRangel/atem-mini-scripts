@@ -34,6 +34,9 @@ class AtemAutoSwitch {
     this.decider = new SwitchDecider(CONFIG);
     /** Cambio pendiente: solo se ejecuta tras switchDelayMs si la decisión se mantiene */
     this.pendingSwitch = null;
+    /** Estamos en plano: tiempo que lleva solo una persona hablando antes de permitir corte a su cámara */
+    this.wideHoldSingleStartedAt = null;
+    this.wideHoldSingleTargetId = null;
   }
 
   async connect() {
@@ -91,6 +94,10 @@ class AtemAutoSwitch {
     console.log(`   Umbral: ${(audio.volumeThreshold * 100).toFixed(1)}%`);
     console.log(`   Hold: ${audio.holdTime}ms | Cooldown: ${audio.cooldownTime}ms (amplia: ${audio.cooldownWideMs ?? 400}ms)`);
     console.log(`   Delay corte: ${audio.switchDelayMs}ms (amplia: ${audio.switchDelayWideMs ?? 300}ms)`);
+    const wideHold = audio.wideHoldBeforeSingleMs ?? 0;
+    if (wideHold > 0) {
+      console.log(`   Plano: esperar ${(wideHold / 1000).toFixed(1)}s con 1 hablante antes de cortar a cámara`);
+    }
     if (CONFIG.cameraMapping[wideCameraId]) {
       console.log(`   Amplia: ${CONFIG.cameraMapping[wideCameraId].name} (silencio >${silenceToWideMs / 1000}s o 2+ hablan)`);
     }
@@ -201,6 +208,9 @@ class AtemAutoSwitch {
   evaluateSwitch() {
     if (!this.isConnected) return;
     const now = Date.now();
+    const wideId = CONFIG.wideCameraId;
+    const wideHoldMs = CONFIG.audio.wideHoldBeforeSingleMs ?? 0;
+
     const decision = this.decider.decide(
       this.tracker,
       this.currentCamera,
@@ -210,19 +220,50 @@ class AtemAutoSwitch {
 
     if (!decision?.switchTo) {
       this.pendingSwitch = null;
+      // No reiniciar el hold del plano cuando estamos en cámara amplia y hay un flicker (null): así el contador de 4s puede completarse
+      if (this.currentCamera !== wideId) {
+        this.wideHoldSingleStartedAt = null;
+        this.wideHoldSingleTargetId = null;
+      }
       return;
+    }
+
+    const switchTo = decision.switchTo;
+    if (switchTo === this.currentCamera) {
+      this.pendingSwitch = null;
+      this.wideHoldSingleStartedAt = null;
+      this.wideHoldSingleTargetId = null;
+      return;
+    }
+
+    // Estamos en plano amplio y quieren cortar a una sola persona: esperar wideHoldBeforeSingleMs antes de permitir el corte.
+    // No reiniciar el contador cuando solo cambia qué cámara es "la que habla" (flicker); solo reiniciar si hay 2+ hablando o silencio.
+    const onWide = this.currentCamera === wideId;
+    const toSingle = decision.reason === 'single';
+    if (onWide && toSingle && wideHoldMs > 0) {
+      if (this.wideHoldSingleStartedAt == null) {
+        this.wideHoldSingleStartedAt = now;
+        this.wideHoldSingleTargetId = switchTo;
+      }
+      const holdElapsed = now - this.wideHoldSingleStartedAt;
+      if (holdElapsed < wideHoldMs) {
+        this.pendingSwitch = null;
+        if (CONFIG.debug && (!this._lastWideHoldLog || now - this._lastWideHoldLog > 800)) {
+          this._lastWideHoldLog = now;
+          const name = CONFIG.cameraMapping[switchTo]?.name || switchTo;
+          console.log(`   [debug] Plano: esperando ${((wideHoldMs - holdElapsed) / 1000).toFixed(1)}s antes de cortar a ${name}`);
+        }
+        return;
+      }
+    } else {
+      this.wideHoldSingleStartedAt = null;
+      this.wideHoldSingleTargetId = null;
     }
 
     const isWide = decision.reason === 'multi' || decision.reason === 'silence';
     const switchDelayMs = isWide
       ? (CONFIG.audio.switchDelayWideMs ?? 300)
       : (CONFIG.audio.switchDelayMs ?? 800);
-
-    const switchTo = decision.switchTo;
-    if (switchTo === this.currentCamera) {
-      this.pendingSwitch = null;
-      return;
-    }
 
     if (switchDelayMs <= 0) {
       this.switchToCamera(switchTo, decision);

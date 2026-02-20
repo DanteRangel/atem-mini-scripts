@@ -36,6 +36,8 @@ export const CONFIG = {
     switchDelayMs: parseInt(process.env.SWITCH_DELAY_MS || '800'),
     /** Retraso más corto al ir a cámara amplia (2+ hablan o silencio). */
     switchDelayWideMs: parseInt(process.env.SWITCH_DELAY_WIDE_MS || '300'),
+    /** Estando en plano amplio: tiempo mínimo (ms) que debe hablar solo una persona antes de cortar a su cámara. Evita cambios bruscos. */
+    wideHoldBeforeSingleMs: parseInt(process.env.WIDE_HOLD_BEFORE_SINGLE_MS || '4000'),
   },
 
   detection: {
